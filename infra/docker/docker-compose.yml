@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: nextpay_db
+    environment:
+      POSTGRES_USER: nextpay_admin
+      POSTGRES_PASSWORD: secure_password_123
+      POSTGRES_DB: nextpay_ledger
+    volumes:
+      - nextpay_db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql # Auto-seeds the DB
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: nextpay_backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://nextpay_admin:secure_password_123@db:5432/nextpay_ledger
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.frontend
+    container_name: nextpay_ui
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+
+volumes:
+  nextpay_db_data:
